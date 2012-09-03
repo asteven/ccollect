@@ -1,0 +1,90 @@
+#!/bin/sh
+#
+# 2012 Steven Armstrong
+# 
+# This file is part of ccollect.
+#
+# ccollect is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# ccollect is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with ccollect. If not, see <http://www.gnu.org/licenses/>.
+#
+ 
+#
+
+usage() {
+   cat << EOS 1>&2
+Usage: ${0##*/} [OPTIONS] <destination> [.. <destination n>]
+(see -h for more information)
+EOS
+}
+
+help() {
+   usage 2>&1 | head -n -1 1>&2
+
+   cat << EOS 1>&2
+
+Given one or more destination directories, 
+set the backup directory mtime based on its name.
+
+e.g.
+   daily.20120728-2359.27209-1 -> touch -t 201207282359 daily.20120728-2359.27209-1
+
+Options:
+    -h    show this help message
+    -d    run in debug mode
+
+EOS
+}
+
+die_usage() {
+   echo "[Error] $@" >&2
+   usage
+   exit 1
+}
+
+
+DEBUG=
+# Parse command line arguments
+while getopts ":dh" options
+do
+   #echo "$flag" $OPTIND $OPTARG
+   case $options in
+      d) DEBUG=1;;
+      h) help; exit 0;;
+      ?) usage; exit 1;
+   esac
+done
+# Strip arguments already handled by getopts
+shift $((OPTIND-1))
+
+[ $DEBUG ] && set -x
+
+
+# All positional arguments are destination directories
+[ $# -ge 1 ] || die_usage "Missing required arguments"
+
+for destination in "$@"; do
+   # get absolut path
+   destination="$(cd "$destination" && pwd -P)"
+   for backup in $(
+      find "$destination" -mindepth 1 -maxdepth 1 \
+         -regextype posix-extended \
+         -regex '^[^.]+.[[:digit:]]{8}-[[:digit:]]{4}.[[:digit:]]*-[[:digit:]]$'); do
+      # strip interval from start
+      # strip pid from end
+      # remove -
+      # what's left is a datetime string suitable for use with touch -t
+      datetime="$(echo "$backup" | awk -F '.' '{gsub("-", "")}{print $2}')"
+      echo "touch -t $datetime $backup"
+      touch -t "$datetime" "$backup"
+   done
+done
