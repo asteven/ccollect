@@ -425,7 +425,7 @@ while [ "${source_no}" -lt "${no_sources}" ]; do
    #
    # Check incomplete backups (needs echo to remove newlines)
    #
-   ls -1 | grep "${CMARKER}\$" > "${TMP}"; ret=$?
+   ls -1 | grep -E "${INTERVAL}.*${CMARKER}\$" > "${TMP}"; ret=$?
 
    if [ "$ret" -eq 0 ]; then
       _techo "Incomplete backups: $(echo $(cat "${TMP}"))"
