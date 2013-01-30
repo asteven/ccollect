@@ -452,10 +452,16 @@ while [ "${source_no}" -lt "${no_sources}" ]; do
    fi
 
    #
-   # Check for backup directory to clone from: Always clone from the latest one!
+   # Check for backup directory to clone from: Always clone from the latest one
+   # while ignoring incomplete ones!
    #
-   last_dir="$(ls -${TSORT}p1 | grep '/$' | head -n 1)" || \
-      _exit_err "Failed to list contents of ${ddir}."
+   last_dir=$(
+      for candidate in $(ls -${TSORT}p1 | grep '/$'); do
+         if [ ! -f "${candidate%/}${CMARKER}" ]; then
+            echo "$candidate"
+            break
+         fi 
+      done) || _exit_err "Failed to list contents of ${ddir}."
 
    #
    # Clone from old backup, if existing
